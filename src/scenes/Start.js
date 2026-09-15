@@ -5,10 +5,12 @@
  * Required URL parameters supplied by Qualtrics:
  *   gameId=...
  *   qualtricsId=... (responseId and ResponseID are also accepted)
- *   respondentDecile=1..10
  *   condition=insufficiency|sufficiency
  *
  * Optional URL parameters:
+ *   respondentDecile=1..10 (missing/invalid forces neutral control)
+ *   incomeControlFallback=0|1
+ *   incomeRoutingReason=...
  *   saveUrl=https://...
  *   parentOrigin=https://your-qualtrics-domain.example
  *   selfInterestCondition=reveal|neutral
@@ -29,7 +31,7 @@ const NEED_PER_FAMILY = 10;
 const DOLLARS_PER_UNIT = 5000;
 
 const CLOSED_POOL_TEXT =
-    'For this task, the number of income blocks is fixed. No additional blocks can be created, borrowed, or obtained from outside these ten groups.';
+    'The number of blocks is fixed.';
 
 /*
  * Keep this true while testing locally.
@@ -56,9 +58,9 @@ const CONDITION_CONFIGS = Object.freeze({
         equalFamiliesMeetingNeed: 0,
         partialMaximumFamilies: 7,
         availableIncomeText:
-            'There are 80 income blocks divided among these 10 families.',
+            'There are 80 blocks divided among these 10 families.',
         boardAvailableText:
-            '80 income blocks available'
+            '80 blocks available'
     }),
 
     sufficiency: Object.freeze({
@@ -72,9 +74,9 @@ const CONDITION_CONFIGS = Object.freeze({
         equalFamiliesMeetingNeed: 10,
         partialMaximumFamilies: 10,
         availableIncomeText:
-            'There are 160 income blocks divided among these 10 families.',
+            'There are 160 blocks divided among these 10 families.',
         boardAvailableText:
-            '160 income blocks available'
+            '160 blocks available'
     })
 });
 
@@ -93,8 +95,8 @@ const COLORS = Object.freeze({
     panel: 0xffffff,
     card: 0xf9fafb,
     cardSelected: 0xfff4df,
-    cardMet: 0xeaf6ee,
-    cardBelow: 0xf5f6f7,
+    cardMet: 0xf9fafb,
+    cardBelow: 0xf9fafb,
     border: 0x263238,
     mutedBorder: 0xaab2b8,
     resource: 0x86c995,
@@ -116,7 +118,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'equal_redistribution',
         prompt:
-            'Thinking about the American economy as shown in this scenario, should income be divided equally among all families, or should each family keep its starting income?',
+            'Thinking about the American economy as shown in this task, should income be divided equally among all families, or should each family keep its starting income?',
         options: [
             {
                 code: 'equal',
@@ -126,7 +128,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
             },
             {
                 code: 'keep',
-                title: 'Keep incomes as they are',
+                title: 'Keep the original incomes',
                 detail:
                     'Each family should keep its starting income.'
             }
@@ -135,7 +137,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'partial_redistribution',
         prompt:
-            'Thinking about the American economy as shown in this scenario, should income above the basic-needs line be redistributed to allow the greatest possible number of families to have at least $50,000, or should each family keep its starting income?',
+            'Thinking about the American economy as shown in this task, should income above the basic-needs line be redistributed to allow the greatest possible number of families to have at least $50,000, or should each family keep its starting income?',
         options: [
             {
                 code: 'partial',
@@ -145,7 +147,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
             },
             {
                 code: 'keep',
-                title: 'Keep incomes as they are',
+                title: 'Keep the original incomes',
                 detail:
                     'Each family should keep its starting income.'
             }
@@ -154,7 +156,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'government_feasibility',
         prompt:
-            'Thinking about the American economy as shown in this scenario, would it be possible for government policy to ensure that every family has enough income to meet its basic needs?',
+            'Thinking about the American economy as shown in this task, would it be possible for government policy to ensure that every family has enough income to meet its basic needs?',
         options: [
             {
                 code: 'possible',
@@ -173,19 +175,19 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'redistributive_guarantee',
         prompt:
-            'Thinking about the American economy as shown in this scenario, should the government redistribute income to guarantee that every family has enough income to meet its basic needs?',
+            'Thinking about the American economy as shown in this task, should the government create a policy that guarantees that each family will have enough income to meet its basic needs?',
         options: [
             {
                 code: 'support_guarantee',
-                title: 'Guarantee a basic-needs income',
+                title: 'Create a policy',
                 detail:
-                    'The government should redistribute income to guarantee that every family has enough income to meet its basic needs.'
+                    'The government should create a policy that guarantees that each family will have enough income to meet its basic needs.'
             },
             {
                 code: 'oppose_guarantee',
-                title: 'Do not guarantee a basic-needs income',
+                title: 'Do not create a policy',
                 detail:
-                    'The government should not use income redistribution to guarantee that every family has enough income to meet its basic needs.'
+                    'The government should not create a policy that guarantees that each family will have enough income to meet its basic needs.'
             }
         ]
     }
@@ -195,32 +197,32 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     {
         code: 'responsibility',
         prompt:
-            'Thinking about the American economy as shown in this scenario, should each family be primarily responsible for meeting its own basic needs, or should people share responsibility for making sure every family can meet its basic needs?',
+            'Thinking about the American economy as shown in this task, should people be primarily responsible for meeting their own basic needs, or should people share responsibility for making sure everyone can meet their basic needs?',
         options: [
             {
                 code: 'shared',
                 title: 'Shared responsibility',
                 detail:
-                    'People in the United States should share responsibility for making sure every family can meet its basic needs.'
+                    'People in the United States should share responsibility for making sure everyone can meet their basic needs.'
             },
             {
                 code: 'personal',
                 title: 'Personal responsibility',
                 detail:
-                    'Each family should be primarily responsible for making sure it can meet its own basic needs.'
+                    'People should be primarily responsible for making sure they can meet their own basic needs.'
             }
         ]
     },
     {
         code: 'fairness',
         prompt:
-            'Thinking about the American economy as shown in this scenario, which approach to distributing income would be fairer?',
+            'Thinking about the American economy as shown in this task, which approach to distributing income would be fairer?',
         options: [
             {
                 code: 'equity',
                 title: 'Give more to families with less',
                 detail:
-                    'Families with lower incomes should receive additional income so that every family has an equal opportunity to meet its basic needs.'
+                    'Families with lower incomes should receive more help from the government so that every family has an equal chance to meet its basic needs.'
             },
             {
                 code: 'proportionality',
@@ -233,7 +235,7 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     {
         code: 'time',
         prompt:
-            'Thinking about the American economy as shown in this scenario, which should receive greater priority: improving economic well-being and production today, or investing to improve economic well-being and production in the future?',
+            'Thinking about the American economy as shown in this task, which should receive greater priority: improving economic well-being and production today, or investing to improve economic well-being and production in the future?',
         options: [
             {
                 code: 'present',
@@ -252,38 +254,38 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     {
         code: 'scope',
         prompt:
-            'Thinking about the American economy as shown in this scenario, should U.S. economic resources help people in other countries meet their basic needs, or prioritize people in the United States?',
+            'Thinking about the American economy as shown in this task, should the U.S. provide foreign aid to help people in other countries meet their basic needs?',
         options: [
             {
                 code: 'international',
-                title: 'Help people in other countries',
+                title: 'Provide foreign aid',
                 detail:
-                    'Use some U.S. economic resources to help people in other countries meet their basic needs, even if this leaves fewer resources in the United States.'
+                    'Provide foreign aid, even if this leaves fewer resources in the United States.'
             },
             {
                 code: 'domestic',
-                title: 'Prioritize people in the United States',
+                title: 'Do not provide foreign aid',
                 detail:
-                    'Prioritize helping people in the United States meet their basic needs, even if some people in other countries cannot meet theirs.'
+                    'Do not provide foreign aid, even if this means more people in other countries cannot meet their basic needs.'
             }
         ]
     },
     {
         code: 'strategy',
         prompt:
-            'Thinking about the American economy as shown in this scenario, are people more likely to cooperate with one another or compete with one another for economic resources?',
+            'Thinking about the American economy as shown in this task, are people more likely to cooperate with one another or compete with one another?',
         options: [
             {
                 code: 'cooperate',
                 title: 'More likely to cooperate',
                 detail:
-                    'People are more likely to work together to obtain economic resources.'
+                    'People are more likely to work together.'
             },
             {
                 code: 'compete',
                 title: 'More likely to compete',
                 detail:
-                    'People are more likely to compete with one another for economic resources.'
+                    'People are more likely to compete with one another.'
             }
         ]
     }
@@ -298,6 +300,7 @@ export default class Start extends Phaser.Scene
         this.conditionName = null;
         this.conditionConfig = null;
         this.requestedSelfInterestCondition = '';
+        this.transferBatchSize = 1;
     }
 
     preload ()
@@ -307,6 +310,8 @@ export default class Start extends Phaser.Scene
 
     create ()
     {
+        // A click must remain a click until the pointer has actually moved.
+        this.input.dragDistanceThreshold = 6;
         this.cameras.main.setBackgroundColor(
             COLORS.page
         );
@@ -360,24 +365,27 @@ export default class Start extends Phaser.Scene
             )
         ).trim();
 
-        const respondentDecileRaw =
-            Number.parseInt(
-                urlParams.get('respondentDecile') ||
-                (
-                    TEST_MODE
-                        ? String(
-                            TEST_DEFAULTS.respondentDecile
-                        )
-                        : ''
-                ),
-                10
-            );
-
-        const respondentDecile =
-            respondentDecileRaw >= 1 &&
-            respondentDecileRaw <= 10
-                ? respondentDecileRaw
-                : null;
+        // Never replace a survey respondent's missing decile with a test value.
+        const useTestDecile = TEST_MODE && window.location.search === '';
+        const decileText = (
+            urlParams.get('respondentDecile') ??
+            (useTestDecile ? String(TEST_DEFAULTS.respondentDecile) : '')
+        ).trim();
+        const requestedIncomeFallback = urlParams.get('incomeControlFallback') === '1';
+        const validDecile = /^(?:[1-9]|10)$/.test(decileText);
+        const incomeControlFallback = requestedIncomeFallback || !validDecile;
+        const respondentDecile = incomeControlFallback ? null : Number(decileText);
+        const allowedIncomeReasons = [
+            'invalid_or_missing_income_and_household_size',
+            'invalid_or_missing_income',
+            'invalid_or_missing_household_size',
+            'invalid_income_decile'
+        ];
+        const suppliedIncomeReason = urlParams.get('incomeRoutingReason') || '';
+        const incomeRoutingReason = incomeControlFallback
+            ? (allowedIncomeReasons.includes(suppliedIncomeReason)
+                ? suppliedIncomeReason : 'invalid_income_decile')
+            : '';
 
         this.requestedSelfInterestCondition = (
             urlParams.get('selfInterestCondition') ||
@@ -449,7 +457,10 @@ export default class Start extends Phaser.Scene
                 ),
 
             respondentDecile,
-            selfInterestCondition: null,
+            incomeControlFallback,
+            incomeRoutingReason,
+            selfInterestConditionIssue: incomeControlFallback ? 'missing_or_invalid_income_decile' : null,
+            selfInterestCondition: incomeControlFallback ? 'neutral' : null,
             respondentDecileRevealed: false,
 
             gameStartTime:
@@ -458,6 +469,17 @@ export default class Start extends Phaser.Scene
             gameEndTime: null,
             totalDurationMs: null,
             userAgent: navigator.userAgent,
+            deviceInfo: {
+                platform: navigator.userAgentData?.platform || navigator.platform || null,
+                browserBrands: navigator.userAgentData?.brands || null,
+                mobileHint: navigator.userAgentData?.mobile ?? null,
+                maxTouchPoints: navigator.maxTouchPoints || 0,
+                devicePixelRatio: window.devicePixelRatio || 1,
+                screenWidth: window.screen?.width || null,
+                screenHeight: window.screen?.height || null,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight
+            },
             screenWidth: window.innerWidth,
             screenHeight: window.innerHeight,
             deviceAllowed: this.isDesktopSized(),
@@ -537,13 +559,6 @@ export default class Start extends Phaser.Scene
             );
         }
 
-        if (respondentDecile === null)
-        {
-            launchErrors.push(
-                'a respondent income decile from 1 to 10'
-            );
-        }
-
         if (!this.conditionConfig)
         {
             launchErrors.push(
@@ -578,6 +593,10 @@ export default class Start extends Phaser.Scene
      */
     assignSelfInterestCondition ()
     {
+        if (this.gameData.incomeControlFallback || this.gameData.respondentDecile === null)
+        {
+            return 'neutral';
+        }
         const validConditions = [
             'reveal',
             'neutral'
@@ -899,7 +918,7 @@ showWelcomeScreen ()
     this.addScreenText(
         640,
         350,
-        'You will view information and make choices about how income is divided among families in the United States.',
+        'In this task, you will view information about the American economy.\n\nThen you will take on the role of a government decision-maker and make decisions about how income is distributed in America.',
         27,
         COLORS.ink,
         820,
@@ -937,7 +956,7 @@ showTaskInstructions ()
     this.addScreenText(
         640,
         285,
-        'Please complete this task on a laptop or desktop computer. Do not use a phone or tablet.',
+        'Use a laptop or desktop computer.',
         27,
         COLORS.warning,
         820,
@@ -947,7 +966,7 @@ showTaskInstructions ()
     this.addScreenText(
         640,
         420,
-        'Read each screen carefully and answer every question to the best of your ability.',
+        'Read carefully and answer each question.',
         26,
         COLORS.ink,
         820,
@@ -976,7 +995,7 @@ showTaskInstructions ()
     this.addScreenText(
         640,
         150,
-        'In the United States, families\' incomes differ. \n \n Some families have more than enough income to meet their basic needs, while others do not.',
+        'Families in the United States have different incomes. Some have enough to meet their basic needs; others do not.',
         27,
         COLORS.ink,
         920,
@@ -1013,9 +1032,20 @@ showTaskInstructions ()
         'center'
     ).setOrigin(0.5, 0).setDepth(61);
 
+    this.addButton(640, 635, 190, 56, 'Next', () => {
+        this.showGovernmentChoicesIntroduction();
+    });
+}
+
+    showGovernmentChoicesIntroduction ()
+{
+    this.enterScreen('government_choices_introduction');
+    this.clearScreen();
+    this.addPanel(640, 360, 1080, 600);
+
     this.addScreenText(
         640,
-        530,
+        330,
         'Governments make choices about whether income should be redistributed and, if so, how.',
         27,
         COLORS.ink,
@@ -1024,7 +1054,7 @@ showTaskInstructions ()
     ).setOrigin(0.5);
 
     this.addButton(640, 635, 190, 56, 'Next', () => {
-        this.showBasicNeedsThreshold();
+        this.showBasicNeedsBlocks();
     });
 }
     // Screen 2
@@ -1033,10 +1063,9 @@ showTaskInstructions ()
         this.enterScreen('basic_needs_threshold');
         this.clearScreen();
         this.addPanel(640, 360, 1080, 620);
-
         this.addScreenText(
             640,
-            125,
+            195,
             'A family of four needs about $50,000 a year to meet its basic needs in the United States today. \n \n These needs include food, housing, and basic medical care.',
             27,
             COLORS.ink,
@@ -1044,31 +1073,45 @@ showTaskInstructions ()
             'center'
         ).setOrigin(0.5);
 
-        this.drawFamilyGlyph(470, 325, 1.45);
-        this.drawBlockStack(760, 380, 10, 100, 10, 4);
 
-        this.addScreenText(
-            760,
-            420,
-            '$50,000 = 10 income blocks',
-            25,
-            COLORS.ink,
-            340,
-            'center'
-        ).setOrigin(0.5);
+        this.drawFamilyGlyph(640, 335, 1.1);
+        this.addScreenText(640, 400, '$50,000', 28, COLORS.ink, 300, 'center').setOrigin(0.5);
 
-        this.addScreenText(
-            640,
-            515,
-            'In this game, ten income blocks represent $50,000.',
-            27,
-            COLORS.ink,
-            860,
-            'center'
-        ).setOrigin(0.5);
-
+        const blockHeight = 12;
+        const blockGap = 3;
+        const stackBottom = 590;
+        const needsLineY = stackBottom - 9 * (blockHeight + blockGap) - blockHeight / 2;
+        this.drawBlockStack(640, stackBottom, 10, 140, blockHeight, blockGap);
+        const needsLine = this.add.line(0, 0, 465, needsLineY, 815, needsLineY, COLORS.threshold, 1).setOrigin(0, 0);
+        needsLine.setLineWidth(3);
+        this.addScreenObject(needsLine);
+        this.addScreenText(835, needsLineY - 22, 'Basic-needs line', 20, '#6c3483', 350, 'center').setOrigin(0.5);
         this.addButton(640, 635, 190, 54, 'Next', () => {
             this.showBasicNeedsComprehensionCheck();
+        });
+    }
+
+    showBasicNeedsBlocks ()
+    {
+        this.enterScreen('single_income_block');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 620);
+        this.addScreenText(640, 150, 'In this task, 1 block = $5,000', 30, COLORS.ink, 860, 'center').setOrigin(0.5);
+        this.drawBlockStack(640, 370, 1, 140, 12, 5);
+        this.addButton(640, 635, 190, 54, 'Next', () => {
+            this.showTenIncomeBlocks();
+        });
+    }
+
+    showTenIncomeBlocks ()
+    {
+        this.enterScreen('basic_needs_blocks');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 620);
+        this.addScreenText(640, 150, 'In this task, 10 blocks = $50,000', 30, COLORS.ink, 860, 'center').setOrigin(0.5);
+        this.drawBlockStack(640, 445, 10, 140, 12, 5);
+        this.addButton(640, 635, 190, 54, 'Next', () => {
+            this.showBasicNeedsThreshold();
         });
     }
 
@@ -1082,7 +1125,7 @@ showBasicNeedsComprehensionCheck ()
     this.addScreenText(
         640,
         175,
-        'According to the game, how many income blocks represent $50,000?',
+        'According to the game, how many blocks represent $50,000?',
         29,
         COLORS.ink,
         880,
@@ -1090,9 +1133,9 @@ showBasicNeedsComprehensionCheck ()
     ).setOrigin(0.5);
 
     const choices = [
-        '5 income blocks',
-        '10 income blocks',
-        '15 income blocks'
+        '5 blocks',
+        '10 blocks',
+        '15 blocks'
     ];
 
     choices.forEach((choice, index) => {
@@ -1104,7 +1147,7 @@ showBasicNeedsComprehensionCheck ()
             choice,
             () => {
                 const correct =
-                    choice === '10 income blocks';
+                    choice === '10 blocks';
 
                 this.gameData.comprehensionCheckChoice = choice;
                 this.gameData.comprehensionCheckPassed = correct;
@@ -1129,7 +1172,7 @@ showBasicNeedsComprehensionCheck ()
     });
 }
 
-// Shown after selecting 10 income blocks
+// Shown after selecting 10 blocks
 showCorrectBasicNeedsFeedback ()
 {
     this.enterScreen('basic_needs_check_correct');
@@ -1149,7 +1192,7 @@ showCorrectBasicNeedsFeedback ()
     this.addScreenText(
         640,
         220,
-        'In this game, 10 income blocks represent $50,000.',
+        'In this game, 10 blocks represent $50,000.',
         27,
         COLORS.ink,
         760,
@@ -1168,7 +1211,7 @@ showCorrectBasicNeedsFeedback ()
     this.addScreenText(
         640,
         505,
-        '$50,000 = 10 income blocks',
+        '$50,000 = 10 blocks',
         24,
         COLORS.ink,
         600,
@@ -1187,7 +1230,7 @@ showCorrectBasicNeedsFeedback ()
     );
 }
 
-// Shown after selecting 5 or 15 income blocks
+// Shown after selecting 5 or 15 blocks
 showIncorrectBasicNeedsFeedback (selectedChoice)
 {
     this.enterScreen('basic_needs_check_incorrect');
@@ -1217,7 +1260,7 @@ showIncorrectBasicNeedsFeedback (selectedChoice)
     this.addScreenText(
         640,
         250,
-        'The correct answer is 10 income blocks.',
+        'The correct answer is 10 blocks.',
         28,
         COLORS.ink,
         760,
@@ -1236,7 +1279,7 @@ showIncorrectBasicNeedsFeedback (selectedChoice)
     this.addScreenText(
         640,
         520,
-        '$50,000 = 10 income blocks',
+        '$50,000 = 10 blocks',
         24,
         COLORS.ink,
         600,
@@ -1274,7 +1317,7 @@ showAboveAndBelowThreshold ()
     this.addScreenText(
         640,
         127,
-        'The purple line represents the $50,000 a family needs to meet its basic needs.',
+        'The purple line represents the $50,000 a family of four needs to meet its basic needs.',
         27,
         COLORS.ink,
         920,
@@ -1352,7 +1395,7 @@ showRepresentativeFamilyExplanation ()
     this.addScreenText(
         640,
         535,
-        'In this scenario, the income shown for each family is the average yearly income of families in that income group before taxes and government benefits are taken into account.',
+        "The blocks show the group’s average yearly income before taxes and government benefits.",
         26,
         COLORS.ink,
         900,
@@ -1440,7 +1483,7 @@ showRepresentativeFamilyExplanation ()
         this.addScreenText(
             640,
             570,
-            'Their yearly income extends above the $50,000 basic-needs line.',
+            'Their yearly income exceeds the $50,000 basic-needs line.',
             27,
             COLORS.ink,
             900,
@@ -1452,6 +1495,49 @@ showRepresentativeFamilyExplanation ()
     }
 
     // Screen 7
+    showBatchMoveNote ()
+    {
+        this.enterScreen('batch_move_note');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 600);
+        this.addScreenText(
+            640, 155,
+            'You can also move 5 or 10 blocks at a time. Choose 5 or 10 under “Blocks per move,” then move the blocks to another family.',
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        [5, 10].forEach((amount, index) => {
+            const centerX = index === 0 ? 390 : 890;
+            this.addScreenText(centerX, 280, 'Blocks per move', 22, COLORS.ink, 300, 'center').setOrigin(0.5);
+            this.addScreenObject(this.add.rectangle(centerX, 325, 90, 42, COLORS.ink));
+            this.addScreenText(centerX, 325, String(amount), 25, '#ffffff', 80, 'center').setOrigin(0.5);
+            const blockHeight = 12;
+            const gap = 5;
+            const bottomY = 455 + (amount - 1) * (blockHeight + gap) / 2;
+            this.drawBlockStack(centerX - 115, bottomY, amount, 100, blockHeight, gap);
+            this.addScreenText(centerX, 455, '→', 45, COLORS.ink, 90, 'center').setOrigin(0.5);
+            this.drawFamilyGlyph(centerX + 115, 455, 0.95);
+        });
+
+        this.addButton(640, 635, 190, 56, 'Next', () => {
+            this.showGovernmentPolicyRole();
+        });
+    }
+
+    showGovernmentPolicyRole ()
+    {
+        this.enterScreen('government_policy_role');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 600);
+        this.addScreenText(
+            640, 330,
+            'Imagine you are in charge of deciding whether and how the government redistributes income among families.',
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        this.addButton(640, 635, 190, 56, 'Next', () => {
+            this.startFreeAllocation();
+        });
+    }
+
     showFullStartingDistribution ()
     {
         this.enterScreen('full_starting_distribution');
@@ -1460,7 +1546,7 @@ showRepresentativeFamilyExplanation ()
         this.addScreenText(
             640,
             50,
-            'Here are 10 families. Each represents one-tenth of American families, ordered by income. Each one-tenth is called an income decile. In this scenario, the income shown is the average income of families in that decile.',
+            'Here are 10 families. Each represents one-tenth of American families, ordered by income. Each one-tenth is called an income decile. In this task, the income shown is the average income of families in that decile.',
             27,
             COLORS.ink,
             1120,
@@ -1510,7 +1596,7 @@ showRepresentativeFamilyExplanation ()
     this.addScreenText(
         640,
         95,
-        'Each family needs 10 income blocks to reach the $50,000 basic-needs line.',
+        'Each family needs 10 blocks to reach the $50,000 basic-needs line.',
         29,
         COLORS.ink,
         1000,
@@ -1550,7 +1636,7 @@ showRepresentativeFamilyExplanation ()
     this.addScreenText(
         640,
         520,
-        '10 families × 10 income blocks each = 100 income blocks',
+        '10 families × 10 blocks each = 100 blocks',
         31,
         COLORS.ink,
         950,
@@ -1560,7 +1646,7 @@ showRepresentativeFamilyExplanation ()
     this.addScreenText(
         640,
         570,
-        'There must be at least 100 income blocks in total for all 10 families to meet their basic needs.',
+        'There must be at least 100 blocks in total for all 10 families to meet their basic needs.',
         23,
         COLORS.ink,
         960,
@@ -1636,7 +1722,7 @@ showAvailableIncomeDistribution ()
         50,
         'Next',
         () => {
-            this.showFreeAllocationInstructions();
+            this.showIncomeSharingExplanation();
         }
     );
 }
@@ -1661,7 +1747,7 @@ showAvailableIncomeDistribution ()
         this.addScreenText(
             640,
             245,
-            'Considering all the income available across the 10 families, is there enough total income for every family to have at least $50,000?',
+            'If the total income shown were redistributed, could all 10 families have at least $50,000 each?',
             27,
             COLORS.ink,
             900,
@@ -1700,6 +1786,28 @@ this.showFinalScreen();
     }
 
     // Screen 9
+    showTaskTransition (screen, title, paragraphs, next)
+    {
+        this.enterScreen(screen);
+        this.clearScreen();
+        this.addPanel(640, 360, 1120, 630);
+        this.addScreenText(640, 105, title, 32, COLORS.ink, 1020, 'center').setOrigin(0.5);
+        const positions = paragraphs.length === 3 ? [230, 365, 505] : [280, 440];
+        paragraphs.forEach((text, index) => {
+            this.addScreenText(640, positions[index], text, 25, COLORS.ink, 980, 'center').setOrigin(0.5);
+        });
+        this.addButton(640, 635, 210, 52, 'Continue', next);
+    }
+
+    showIncomeSharingExplanation ()
+    {
+        this.showTaskTransition('income_sharing_explanation', '', [
+            'The government can use taxes and benefits to change how income is shared among families.',
+            'In this task, moving blocks represents those changes. For example, moving one block lowers one family’s income and raises another’s by $5,000.',
+            'The total number of blocks stays the same.'
+        ], () => this.showFreeAllocationInstructions());
+    }
+
     showFreeAllocationInstructions ()
     {
         this.enterScreen('drag_practice');
@@ -1798,13 +1906,13 @@ this.showFinalScreen();
             COLORS.resource
         );
 
-        practiceBlock.setStrokeStyle(4, COLORS.resourceSelected);
+        practiceBlock.setStrokeStyle(3, 0x000000);
         practiceBlock.setDepth(100);
 
         practiceBlock.setInteractive(
             new Phaser.Geom.Rectangle(
-                -blockWidth / 2 - 12,
-                -blockHeight / 2 - 12,
+                -12,
+                -12,
                 blockWidth + 24,
                 blockHeight + 24
             ),
@@ -1827,7 +1935,7 @@ this.showFinalScreen();
         let practiceCompleted = false;
 
         practiceBlock.on('dragstart', () => {
-            practiceBlock.setFillStyle(COLORS.resourceSelected);
+            practiceBlock.setFillStyle(COLORS.resource);
             practiceBlock.setDepth(500);
         });
 
@@ -1868,8 +1976,8 @@ this.showFinalScreen();
                 );
                 feedback.setColor(COLORS.success);
 
-                this.addButton(640, 640, 230, 52, 'Begin task', () => {
-                    this.startFreeAllocation();
+                this.addButton(640, 640, 230, 52, 'Next', () => {
+                    this.showBatchMoveNote();
                 });
             }
             else
@@ -1889,6 +1997,7 @@ this.showFinalScreen();
     startFreeAllocation ()
     {
         this.allocationMode = 'free';
+        this.transferBatchSize = 1;
         this.currentAllocation = [...this.initialAllocation];
         this.selectedSourceDecile = null;
         this.boardFeedbackMessage = '';
@@ -1904,11 +2013,11 @@ this.showFinalScreen();
         const mode = this.allocationMode || 'free';
 
         const boardTitles = {
-            free: 'Arrange the income blocks in the way you think is best for America',
+            free: 'Arrange the blocks in the way you think is best for America',
             equal: 'Divide the income equally among all 10 families',
             partial: 'Allow the greatest possible number of families to reach $50,000',
             self_interest:
-                'Now arrange the income blocks in the way you think is best for America'
+                'Now arrange the blocks in the way you think is best for America'
         };
 
 const equalValue =
@@ -1958,7 +2067,7 @@ this.addScreenText(
             mode === 'self_interest' &&
 this.gameData.selfInterestCondition === 'reveal'
     ? `Your income group is Decile ${this.gameData.respondentDecile}; its box is outlined in green.`
-    : 'The number of income blocks is fixed; no additional blocks can be added.',
+    : CLOSED_POOL_TEXT,
             14,
             COLORS.muted,
             1050,
@@ -1973,8 +2082,9 @@ this.gameData.selfInterestCondition === 'reveal'
         const stackBottom = 520;
 
         const tallestStack = Math.max(...this.currentAllocation);
-        const blockHeight = tallestStack > 42 ? 4 : 6;
-        const blockGap = 1;
+        const { blockHeight, blockGap } = this.fitStackLayout(
+            tallestStack, cardTop + 140, stackBottom, 6
+        );
 
         const thresholdY = this.getThresholdY(
             stackBottom,
@@ -2105,7 +2215,7 @@ this.gameData.selfInterestCondition === 'reveal'
             '#6c3483',
             90,
             'left'
-        ).setDepth(61);
+        ).setBackgroundColor('#f4f6f8').setPadding(3, 1, 3, 1).setDepth(61);
 
         const meetingNeed = this.countFamiliesMeetingNeed(
             this.currentAllocation
@@ -2128,13 +2238,8 @@ else if (mode === 'partial')
 }
 else
 {
-    selectionMessage =
-        this.boardFeedbackMessage ||
-        (
-            this.selectedSourceDecile === null
-                ? 'If you want to move income blocks, drag a block, or select a block and then select another family.'
-                : `Decile ${this.selectedSourceDecile + 1} selected. Select another family to move one block.`
-        );
+    selectionMessage = this.boardFeedbackMessage ||
+        'Choose how many blocks to move. Select a block, then another family, or drag a block to that family.';
 }
 
         this.addScreenText(
@@ -2147,13 +2252,29 @@ else
             'left'
         ).setOrigin(0, 0.5);
 
+        if (mode === 'free' || mode === 'self_interest')
+        {
+            this.addScreenText(740, 578, 'Blocks per move', 16, COLORS.ink, 175, 'right')
+                .setOrigin(1, 0.5);
+            [1, 5, 10].forEach((value, index) => {
+                const selected = this.transferBatchSize === value;
+                this.addButton(790 + index * 105, 578, 90, 36,
+                    String(value), () => {
+                        this.transferBatchSize = value;
+                        this.recordAction({action: 'select_transfer_size', task: mode, value});
+                        this.redrawAllocationBoard();
+                    }, selected ? COLORS.button : COLORS.buttonLight,
+                    selected ? '#ffffff' : COLORS.ink);
+            });
+        }
+
         this.addScreenText(
             640,
             612,
             selectionMessage,
             16,
             COLORS.muted,
-            760,
+            1140,
             'center'
         ).setOrigin(0.5);
 
@@ -2305,7 +2426,7 @@ else if (mode === 'self_interest')
      * Reset
      */
     this.addButton(
-        120,
+        480,
         675,
         160,
         50,
@@ -2332,95 +2453,10 @@ else if (mode === 'self_interest')
     );
 
     /*
-     * Automatic partial redistribution
-     */
-    this.addButton(
-        390,
-        675,
-        300,
-        50,
-        'Redistribute to meet basic needs',
-        () => {
-            const before = [
-                ...this.currentAllocation
-            ];
-
-            this.currentAllocation =
-                this.buildAutomaticPartialAllocation();
-
-            this.selectedSourceDecile = null;
-
-            this.boardFeedbackMessage =
-                'Income above the basic-needs line has been partially redistributed.';
-
-            this.selfInterestEqualApplied = false;
-            this.selfInterestPartialApplied = true;
-
-            this.recordAction({
-                action:
-                    'apply_automatic_partial_redistribution',
-                task: mode,
-                before,
-                allocation: [
-                    ...this.currentAllocation
-                ],
-                priority:
-                    'highest_below_threshold_first'
-            });
-
-            this.redrawAllocationBoard();
-        },
-        COLORS.buttonLight,
-        COLORS.ink
-    );
-
-    /*
-     * Automatic equal redistribution
-     */
-    this.addButton(
-        705,
-        675,
-        270,
-        50,
-        'Divide income equally',
-        () => {
-            const before = [
-                ...this.currentAllocation
-            ];
-
-            this.currentAllocation =
-                new Array(
-                    this.currentAllocation.length
-                ).fill(equalValue);
-
-            this.selectedSourceDecile = null;
-
-            this.boardFeedbackMessage =
-                'Income has been divided equally among all 10 families.';
-
-            this.selfInterestEqualApplied = true;
-            this.selfInterestPartialApplied = false;
-
-            this.recordAction({
-                action: 'apply_equal_division',
-                task: mode,
-                before,
-                allocation: [
-                    ...this.currentAllocation
-                ]
-            });
-
-            this.redrawAllocationBoard();
-        },
-        COLORS.buttonLight,
-        COLORS.ink
-    );
-
-    /*
      * Submit
      */
     this.addButton(
-        1060,
+        800,
         675,
         300,
         50,
@@ -2448,6 +2484,7 @@ else if (mode === 'self_interest')
     {
         const blockWidth = 88;
         const cellHeight = blockHeight + blockGap;
+        const stackResources = [];
 
         for (let unitIndex = 0; unitIndex < amount; unitIndex += 1)
         {
@@ -2461,13 +2498,14 @@ else if (mode === 'self_interest')
                 COLORS.resource
             );
 
-            resource.setStrokeStyle(1, COLORS.resourceBorder);
+            resource.setStrokeStyle(this.allocationMode === 'practice' ? 2 : 1, this.allocationMode === 'practice' ? 0x000000 : COLORS.resourceBorder);
             resource.setDepth(20);
             this.addScreenObject(resource);
 
             const mayMoveThisBlock =
     this.allocationMode !== 'equal' &&
-    this.allocationMode !== 'partial';
+    this.allocationMode !== 'partial' &&
+    !(this.allocationMode === 'practice' && this.practiceStageCompleted);
 
             if (!mayMoveThisBlock)
             {
@@ -2476,31 +2514,42 @@ else if (mode === 'self_interest')
 
             resource.setInteractive(
                 new Phaser.Geom.Rectangle(
-                    -blockWidth / 2 - 5,
-                    -blockHeight / 2 - 9,
+                    -5,
+                    -9,
                     blockWidth + 10,
                     blockHeight + 18
                 ),
                 Phaser.Geom.Rectangle.Contains
             );
 
+            stackResources.push(resource);
             resource.setData('sourceDecile', decileIndex);
             resource.setData('wasDragged', false);
             this.input.setDraggable(resource);
 
-            resource.on('dragstart', () => {
+            resource.on('dragstart', pointer => {
                 resource.setData('wasDragged', true);
                 this.isDraggingResource = true;
-                resource.setFillStyle(COLORS.resourceSelected);
-                resource.setDepth(500);
+                const selectedSize = [1, 5, 10].includes(this.transferBatchSize) ? this.transferBatchSize : 1;
+                const count = Math.min(selectedSize, this.currentAllocation[decileIndex]);
+                // Hide exactly the blocks being carried, including the grabbed one.
+                const carried = [resource, ...stackResources.slice().reverse().filter(item => item !== resource)].slice(0, count);
+                carried.forEach(item => item.setAlpha(0));
+                resource.setData('carriedResources', carried);
+                resource.setData('dragBundle', this.createTransferBundle(
+                    pointer.worldX, pointer.worldY - 12, count, blockWidth, blockHeight, blockGap
+                ));
             });
 
-            resource.on('drag', (pointer, dragX, dragY) => {
-                resource.x = dragX;
-                resource.y = dragY - 12;
+            resource.on('drag', pointer => {
+                const bundle = resource.getData('dragBundle');
+                if (bundle) bundle.setPosition(pointer.worldX, pointer.worldY - 12);
             });
 
             resource.on('dragend', pointer => {
+                const bundle = resource.getData('dragBundle');
+                if (bundle) bundle.destroy();
+                resource.setData('dragBundle', null);
                 const source = resource.getData('sourceDecile');
 
                 const destination = this.findCardAt(
@@ -2525,11 +2574,33 @@ else if (mode === 'self_interest')
             resource.on('pointerup', () => {
                 if (!resource.getData('wasDragged') && !this.isDraggingResource)
                 {
-                    this.selectedSourceDecile = decileIndex;
-                    this.redrawAllocationBoard();
+                    if (this.selectedSourceDecile !== null && this.selectedSourceDecile !== decileIndex)
+                    {
+                        this.moveOneUnit(this.selectedSourceDecile, decileIndex, 'click');
+                    }
+                    else
+                    {
+                        this.selectedSourceDecile = decileIndex;
+                        this.redrawAllocationBoard();
+                    }
                 }
             });
         }
+    }
+
+    createTransferBundle (x, y, count, blockWidth, blockHeight, blockGap)
+    {
+        const bundle = this.add.container(x, y).setDepth(500);
+        for (let index = 0; index < count; index += 1)
+        {
+            const block = this.add.rectangle(
+                0, -index * (blockHeight + blockGap),
+                blockWidth, blockHeight, COLORS.resource
+            ).setStrokeStyle(1, COLORS.resourceBorder);
+            bundle.add(block);
+        }
+        this.addScreenObject(bundle);
+        return bundle;
     }
 
     findCardAt (x, y)
@@ -2552,9 +2623,10 @@ else if (mode === 'self_interest')
             this.currentAllocation[source] <= NEED_PER_FAMILY;
 
         if (
+            !Number.isInteger(source) || !Number.isInteger(destination) ||
             source === destination ||
-            source < 0 ||
-            destination < 0 ||
+            source < 0 || destination < 0 ||
+            source >= this.currentAllocation.length || destination >= this.currentAllocation.length ||
             this.currentAllocation[source] <= 0 ||
             partialTransferWouldCrossNeedsLine
         )
@@ -2562,7 +2634,7 @@ else if (mode === 'self_interest')
             if (partialTransferWouldCrossNeedsLine)
             {
                 this.boardFeedbackMessage =
-                    'Only income blocks above the basic-needs line may be moved in this task.';
+                    'Only blocks above the basic-needs line may be moved in this task.';
             }
 
             if (this.allocationMode === 'self_interest')
@@ -2578,9 +2650,13 @@ else if (mode === 'self_interest')
 
         const sourceBefore = this.currentAllocation[source];
         const destinationBefore = this.currentAllocation[destination];
+        const availableUnits = this.allocationMode === 'partial'
+            ? Math.max(0, sourceBefore - NEED_PER_FAMILY) : sourceBefore;
+        const requestedUnits = [1, 5, 10].includes(this.transferBatchSize) ? this.transferBatchSize : 1;
+        const movedUnits = Math.min(availableUnits, requestedUnits);
 
-        this.currentAllocation[source] -= 1;
-        this.currentAllocation[destination] += 1;
+        this.currentAllocation[source] -= movedUnits;
+        this.currentAllocation[destination] += movedUnits;
         this.selectedSourceDecile = null;
         this.boardFeedbackMessage = '';
 
@@ -2588,7 +2664,9 @@ else if (mode === 'self_interest')
             action: 'transfer',
             task: this.allocationMode,
             method,
-            units: 1,
+            units: movedUnits,
+            requestedUnits,
+            transferBatch: this.transferBatchSize,
             sourceDecile: source + 1,
             destinationDecile: destination + 1,
             sourceBefore,
@@ -2629,15 +2707,7 @@ else if (mode === 'self_interest')
             'center'
         ).setOrigin(0.5);
 
-        this.addScreenText(
-            640,
-            350,
-            `Income blocks by decile: ${submittedAllocation.join(' – ')}`,
-            21,
-            COLORS.muted,
-            850,
-            'center'
-        ).setOrigin(0.5);
+
 
         this.addButton(
             465,
@@ -2655,7 +2725,7 @@ else if (mode === 'self_interest')
 
         this.addButton(815, 540, 230, 56, 'Submit', () => {
             this.storeFreeAllocation(submittedAllocation);
-            this.startEqualDivisionTask();
+            this.showEqualDivisionInstructions();
         });
     }
 
@@ -2692,6 +2762,26 @@ else if (mode === 'self_interest')
             gini: this.gameData.freeAllocationGini,
             totalMoved,
             classification: this.gameData.freeAllocationClassification
+        });
+    }
+
+    showEqualDivisionInstructions ()
+    {
+        this.enterScreen('equal_division_instructions');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 600);
+        this.addScreenText(
+            640, 250,
+            "One option governments have is to redistribute income so all families have the same income.",
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        this.addScreenText(
+            640, 420,
+            "We’ll start again with the original incomes. Next, see what happens with this option.",
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        this.addButton(640, 635, 190, 56, 'Next', () => {
+            this.startEqualDivisionTask();
         });
     }
 
@@ -2768,56 +2858,25 @@ else if (mode === 'self_interest')
         });
     }
 
-    showPartialRedistributionInstructions ()
-{
-    this.enterScreen(
-        'partial_redistribution_instructions'
-    );
-
-    this.clearScreen();
-    this.addPanel(640, 360, 1080, 560);
-
-    this.addScreenText(
-        640,
-        125,
-        'Next, you will see what happens when income above the basic-needs line is partially redistributed.',
-        29,
-        COLORS.ink,
-        930,
-        'center'
-    ).setOrigin(0.5);
-
-    this.addScreenText(
-        640,
-        285,
-        'The redistribution begins with the highest-income family below the line and then works down toward lower-income families. Each family keeps all income blocks at or below the basic-needs line.',
-        24,
-        COLORS.ink,
-        920,
-        'center'
-    ).setOrigin(0.5);
-
-    this.addScreenText(
-        640,
-        455,
-        CLOSED_POOL_TEXT,
-        18,
-        COLORS.muted,
-        920,
-        'center'
-    ).setOrigin(0.5);
-
-    this.addButton(
-        640,
-        600,
-        220,
-        56,
-        'Continue',
-        () => {
+    showPartialPolicyIntroduction ()
+    {
+        this.enterScreen('partial_policy_introduction');
+        this.clearScreen();
+        this.addPanel(640, 360, 1080, 600);
+        this.addScreenText(
+            640, 250,
+            "Another option governments have is to redistribute some income from families above the basic-needs line to families below it.",
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        this.addScreenText(
+            640, 420,
+            "We’ll start again with the original incomes. Next, see what happens with this option.",
+            27, COLORS.ink, 900, 'center'
+        ).setOrigin(0.5);
+        this.addButton(640, 635, 190, 56, 'Next', () => {
             this.startPartialRedistributionTask();
-        }
-    );
-}
+        });
+    }
 
 buildAutomaticPartialAllocation ()
 {
@@ -3048,7 +3107,9 @@ buildAutomaticPartialAllocation ()
     this.addScreenText(
         640,
         245,
-        CLOSED_POOL_TEXT,
+        ['equal_redistribution', 'partial_redistribution'].includes(question.code)
+            ? 'For this question, choose only between the two options below. The arrangement you created earlier is not an option.'
+            : CLOSED_POOL_TEXT,
         18,
         COLORS.muted,
         1000,
@@ -3079,7 +3140,7 @@ buildAutomaticPartialAllocation ()
 
                 if (question.code === 'equal_redistribution')
                 {
-                    this.showPartialRedistributionInstructions();
+                    this.showPartialPolicyIntroduction();
                 }
                 else
                 {
@@ -3155,6 +3216,14 @@ buildAutomaticPartialAllocation ()
 
     showSelfInterestRandomizationScreen ()
 {
+    if (this.gameData.incomeControlFallback || this.gameData.respondentDecile === null)
+    {
+        this.gameData.selfInterestCondition = 'neutral';
+        this.gameData.respondentDecileRevealed = false;
+        this.showNeutralSelfInterestScreen();
+        return;
+    }
+
     if (!this.gameData.selfInterestCondition)
     {
         this.gameData.selfInterestCondition =
@@ -3214,7 +3283,7 @@ showNeutralSelfInterestScreen ()
     this.addScreenText(
         640,
         145,
-        'In this scenario, the income shown is the average for each income decile.',
+        'In this task, the income shown is the average for each income decile.',
         18,
         COLORS.muted,
         1040,
@@ -3296,6 +3365,7 @@ showNeutralSelfInterestScreen ()
     startSelfInterestAllocation ()
     {
         this.allocationMode = 'self_interest';
+        this.transferBatchSize = 1;
         this.currentAllocation = [...this.initialAllocation];
         this.selectedSourceDecile = null;
         this.boardFeedbackMessage = '';
@@ -3324,13 +3394,14 @@ showNeutralSelfInterestScreen ()
         this.gameData.selfInterestAllocationClassification =
             this.classifyAllocation(finalAllocation);
         this.gameData.selfInterestAllocationTotalMoved = totalMoved;
-        this.gameData.selfInterestOwnStartingBlocks =
-            this.initialAllocation[respondentIndex];
-        this.gameData.selfInterestOwnFinalBlocks =
-            finalAllocation[respondentIndex];
-        this.gameData.selfInterestOwnChange =
-            finalAllocation[respondentIndex] -
-            this.initialAllocation[respondentIndex];
+        const hasRespondentDecile = Number.isInteger(this.gameData.respondentDecile) &&
+            this.gameData.respondentDecile >= 1 && this.gameData.respondentDecile <= 10;
+        this.gameData.selfInterestOwnStartingBlocks = hasRespondentDecile
+            ? this.initialAllocation[respondentIndex] : null;
+        this.gameData.selfInterestOwnFinalBlocks = hasRespondentDecile
+            ? finalAllocation[respondentIndex] : null;
+        this.gameData.selfInterestOwnChange = hasRespondentDecile
+            ? finalAllocation[respondentIndex] - this.initialAllocation[respondentIndex] : null;
         this.gameData.selfInterestEqualButtonUsed =
             this.selfInterestEqualApplied;
             this.gameData.selfInterestPartialButtonUsed =
@@ -3458,7 +3529,7 @@ this.recordAction({
         this.addScreenText(
             centerX,
             centerY + 115,
-            'Income transfers between families',
+            'Income transfers between people',
             16,
             COLORS.muted,
             310,
@@ -3470,7 +3541,7 @@ this.recordAction({
         this.addScreenText(
             centerX,
             centerY + 115,
-            'Each family keeps its own income',
+            'People keep their own income',
             16,
             COLORS.muted,
             310,
@@ -3619,12 +3690,6 @@ this.recordAction({
                     0.48
                 );
 
-                this.drawFamilyGlyph(
-                    centerX,
-                    centerY - 105,
-                    0.48
-                );
-
                 this.addVisualSymbol(
                     centerX,
                     centerY + 35,
@@ -3642,67 +3707,18 @@ this.recordAction({
                     centerY - 5,
                     '↙'
                 );
-
-                this.addArrowText(
-                    centerX,
-                    centerY - 42,
-                    '↓'
-                );
             }
             else
             {
-                this.drawFamilyGlyph(
-                    centerX - 135,
-                    centerY - 45,
-                    0.48
-                );
-
-                this.drawFamilyGlyph(
-                    centerX + 135,
-                    centerY - 45,
-                    0.48
-                );
-
-                this.drawFamilyGlyph(
-                    centerX,
-                    centerY - 105,
-                    0.48
-                );
-
-                this.drawBlockStack(
-                    centerX,
-                    centerY + 75,
-                    7,
-                    72,
-                    7,
-                    3
-                );
-
-                this.addArrowText(
-                    centerX - 72,
-                    centerY,
-                    '↘'
-                                    );
-
-                this.addArrowText(
-                    centerX + 72,
-                    centerY,
-                    '↙'
-                );
-
-                this.addArrowText(
-                    centerX,
-                    centerY - 42,
-                    '↓'
-                );
-
+                this.drawFamilyGlyph(centerX - 135, centerY, 0.48);
+                this.drawFamilyGlyph(centerX + 135, centerY, 0.48);
                 this.addScreenText(
                     centerX,
-                    centerY + 115,
-                    'The same income',
-                    16,
-                    COLORS.muted,
-                    180,
+                    centerY,
+                    'VS',
+                    28,
+                    COLORS.ink,
+                    100,
                     'center'
                 ).setOrigin(0.5);
             }
@@ -3719,8 +3735,9 @@ this.recordAction({
         const gap = 127;
         const cardWidth = 112;
         const stackBottom = cardTop + cardHeight - 32;
-        const blockHeight = 4;
-        const blockGap = 1;
+        const { blockHeight, blockGap } = this.fitStackLayout(
+            Math.max(...this.initialAllocation), cardTop + 115, stackBottom, 4
+        );
 
         const thresholdY = this.getThresholdY(
             stackBottom,
@@ -3806,7 +3823,7 @@ this.recordAction({
             '#6c3483',
             90,
             'left'
-        ).setDepth(61);
+        ).setBackgroundColor('#f4f6f8').setPadding(3, 1, 3, 1).setDepth(61);
     }
 
     drawExampleIncomeCard (
@@ -3876,8 +3893,9 @@ this.recordAction({
         }
 
         const stackBottom = topY + height - 22;
-        const blockHeight = 4;
-        const blockGap = 1;
+        const { blockHeight, blockGap } = this.fitStackLayout(
+            amount, topY + (comparisonText ? 195 : 165), stackBottom, 4
+        );
 
         const thresholdY = this.getThresholdY(
             stackBottom,
@@ -4106,6 +4124,18 @@ this.recordAction({
         ).setOrigin(0.5);
     }
 
+    // Reserve the header area before sizing stacks, including extreme allocations.
+    fitStackLayout (amount, stackTop, stackBottom, preferredHeight = 6)
+    {
+        const commonStartingMaximum = Math.max(
+            ...Object.values(CONDITION_CONFIGS).flatMap(config => config.initialAllocation)
+        );
+        const rows = Math.max(NEED_PER_FAMILY, commonStartingMaximum, amount, 1);
+        const cellHeight = Math.min(preferredHeight + 1, (stackBottom - stackTop) / rows);
+        const blockGap = Math.min(1, cellHeight * 0.2);
+        return { blockHeight: cellHeight - blockGap, blockGap };
+    }
+
     getThresholdY (stackBottom, blockHeight, blockGap)
     {
         return stackBottom -
@@ -4265,6 +4295,7 @@ showFinalScreen ()
         this.sessionStartPerformance
     );
 
+    this.gameData.allocationInteractionSummary = this.buildAllocationInteractionSummary();
     this.gameData.saveStatus = 'attempted';
 
     this.addPanel(
@@ -4502,6 +4533,29 @@ clearLocalBackup ()
     }
 }
 
+buildAllocationInteractionSummary ()
+{
+    const summary = {};
+    for (const task of ['free', 'self_interest'])
+    {
+        const actions = this.gameData.actions.filter(action => action.task === task);
+        const transfers = actions.filter(action => action.action === 'transfer');
+        summary[task] = {
+            transferCount: transfers.length,
+            multiBlockTransferCount: transfers.filter(action => action.units > 1).length,
+            transferSizeSelectionCount: actions.filter(action => action.action === 'select_transfer_size').length,
+            transferredUnits: transfers.reduce((total, action) => total + action.units, 0),
+            clickTransferCount: transfers.filter(action => action.method === 'click').length,
+            dragTransferCount: transfers.filter(action => action.method === 'drag').length,
+            equalPresetCount: actions.filter(action => action.action === 'apply_equal_division').length,
+            basicNeedsPresetCount: actions.filter(action => action.action === 'apply_automatic_partial_redistribution').length,
+            resetCount: actions.filter(action => action.action === 'reset_allocation').length,
+            elapsedMs: this.gameData.screenTimings[task === 'free' ? 'free_allocation_board' : 'self_interest_allocation_board'] || 0
+        };
+    }
+    return summary;
+}
+
 buildSurveyBackupSummary ()
 {
     return {
@@ -4516,6 +4570,16 @@ buildSurveyBackupSummary ()
 
         respondentDecile:
             this.gameData.respondentDecile,
+        incomeControlFallback: this.gameData.incomeControlFallback,
+        incomeRoutingReason: this.gameData.incomeRoutingReason,
+        selfInterestConditionIssue: this.gameData.selfInterestConditionIssue,
+
+        deviceInfo: this.gameData.deviceInfo,
+        userAgent: this.gameData.userAgent,
+        screenTimings: this.gameData.screenTimings,
+        allocationInteractionSummary: this.buildAllocationInteractionSummary(),
+        practiceStages: this.gameData.practiceStages || [],
+        dragPracticeCompleted: this.gameData.dragPracticeCompleted,
 
         comprehensionCheckChoice:
             this.gameData
@@ -4655,6 +4719,8 @@ recordAction (action)
 {
     this.gameData.actions.push({
         ...action,
+        task: action.task || this.allocationMode || null,
+        screen: this.currentScreenName,
 
         elapsedMs: Math.round(
             performance.now() -
