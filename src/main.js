@@ -1,6 +1,6 @@
 console.log('MAIN.JS LOADED');
 
-import Start from './scenes/Start.js?v=20260914-update2';
+import Start from './scenes/Start.js?v=20260916-save1';
 
 console.log('START IMPORTED:', Start);
 

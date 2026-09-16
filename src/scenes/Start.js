@@ -4417,58 +4417,84 @@ showFinalScreen ()
         'awaiting_confirmation'
     );
 
-    const response = await fetch(
-        this.saveEndpoint,
-        {
-            method: 'POST',
-            mode: 'cors',
-            credentials: 'omit',
-            cache: 'no-store',
-            redirect: 'follow',
-            headers: {
-                'Content-Type':
-                    'text/plain;charset=utf-8'
-            },
-            body: JSON.stringify(
-                this.gameData
-            )
-        }
-    );
-
-    if (!response.ok)
-    {
-        throw new Error(
-            `The save server returned HTTP ${response.status}.`
-        );
-    }
-
-    let acknowledgement;
+    const controller = new AbortController();
+    let timeoutId;
+    let saveAcknowledgement;
+    const timeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error('Save confirmation timed out after 30 seconds.'));
+            controller.abort();
+        }, 30000);
+    });
 
     try
     {
-        acknowledgement =
-            await response.json();
-    }
-    catch (error)
-    {
-        throw new Error(
-            'The save server did not return a valid JSON confirmation.'
-        );
-    }
+        // Bound both the request and reading its confirmation body.
+        saveAcknowledgement = await Promise.race([
+            (async () => {
+                const response = await fetch(
+                    this.saveEndpoint,
+                    {
+                        method: 'POST',
+                        signal: controller.signal,
+                        mode: 'cors',
+                        credentials: 'omit',
+                        cache: 'no-store',
+                        redirect: 'follow',
+                        headers: {
+                            'Content-Type':
+                                'text/plain;charset=utf-8'
+                        },
+                        body: JSON.stringify(
+                            this.gameData
+                        )
+                    }
+                );
 
-    const acknowledgementMatches =
-        acknowledgement &&
-        acknowledgement.ok === true &&
-        String(acknowledgement.gameId) ===
-            String(this.gameData.gameId) &&
-        String(acknowledgement.qualtricsId) ===
-            String(this.gameData.qualtricsId);
+                if (!response.ok)
+                {
+                    throw new Error(
+                        `The save server returned HTTP ${response.status}.`
+                    );
+                }
 
-    if (!acknowledgementMatches)
+                let acknowledgement;
+
+                try
+                {
+                    acknowledgement =
+                        await response.json();
+                }
+                catch (error)
+                {
+                    throw new Error(
+                        'The save server did not return a valid JSON confirmation.'
+                    );
+                }
+
+                const acknowledgementMatches =
+                    acknowledgement &&
+                    acknowledgement.ok === true &&
+                    String(acknowledgement.gameId) ===
+                        String(this.gameData.gameId) &&
+                    String(acknowledgement.qualtricsId) ===
+                        String(this.gameData.qualtricsId);
+
+                if (!acknowledgementMatches)
+                {
+                    throw new Error(
+                        'The save server did not confirm the matching game and Qualtrics IDs.'
+                    );
+                }
+
+                return acknowledgement;
+            })(),
+            timeout
+        ]);
+    }
+    finally
     {
-        throw new Error(
-            'The save server did not confirm the matching game and Qualtrics IDs.'
-        );
+        clearTimeout(timeoutId);
     }
 
     this.gameData.saveAcknowledged = true;
@@ -4476,7 +4502,7 @@ showFinalScreen ()
 
     this.clearLocalBackup();
 
-    return acknowledgement;
+    return saveAcknowledgement;
 }
 
 getLocalBackupKey ()
