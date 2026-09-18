@@ -156,7 +156,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'government_feasibility',
         prompt:
-            'Thinking about the American economy as shown in this task, would it be possible for government policy to ensure that every family has enough income to meet its basic needs?',
+            'Thinking about the American economy as shown in this task, would it be POSSIBLE for government policy to ensure that every family has enough income to meet its basic needs?',
         options: [
             {
                 code: 'possible',
@@ -175,7 +175,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'redistributive_guarantee',
         prompt:
-            'Thinking about the American economy as shown in this task, should the government create a policy that guarantees that each family will have enough income to meet its basic needs?',
+            'Thinking about the American economy as shown in this task, SHOULD the government create a policy that guarantees that each family will have enough income to meet its basic needs?',
         options: [
             {
                 code: 'support_guarantee',
@@ -197,13 +197,13 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     {
         code: 'responsibility',
         prompt:
-            'Thinking about the American economy as shown in this task, should people be primarily responsible for meeting their own basic needs, or should people share responsibility for making sure everyone can meet their basic needs?',
+            'Thinking about the American economy as shown in this task, which should receive greater priority: personal responsibility or government responsibility for meeting basic needs?',
         options: [
             {
                 code: 'shared',
-                title: 'Shared responsibility',
+                title: 'Government responsibility',
                 detail:
-                    'People in the United States should share responsibility for making sure everyone can meet their basic needs.'
+                    'The government should take responsibility for making sure everyone can meet their basic needs.'
             },
             {
                 code: 'personal',
@@ -437,7 +437,7 @@ export default class Start extends Phaser.Scene
             qualtricsId,
             condition: this.conditionName,
             gameVersion:
-                'national_deciles_v6_self_interest_randomized',
+                'national_deciles_v7_preferences',
 
             initialAllocation: [
                 ...this.initialAllocation
@@ -918,7 +918,7 @@ showWelcomeScreen ()
     this.addScreenText(
         640,
         350,
-        'In this task, you will view information about the American economy.\n\nThen you will take on the role of a government decision-maker and make decisions about how income is distributed in America.',
+        'This task uses a simplified version of the American economy.\n\nYou will take on the role of a government decision-maker and make decisions about how income is distributed in America.',
         27,
         COLORS.ink,
         820,
@@ -935,7 +935,7 @@ showWelcomeScreen ()
             this.showTaskInstructions();
         }
     );
-}
+    }
 
 showTaskInstructions ()
 {
@@ -1066,7 +1066,7 @@ showTaskInstructions ()
         this.addScreenText(
             640,
             195,
-            'A family of four needs about $50,000 a year to meet its basic needs in the United States today. \n \n These needs include food, housing, and basic medical care.',
+            'In this task, a family of four needs $50,000 a year to meet its basic needs. \n \n These needs include food, housing, and basic medical care.',
             27,
             COLORS.ink,
             930,
@@ -1108,7 +1108,7 @@ showTaskInstructions ()
         this.enterScreen('basic_needs_blocks');
         this.clearScreen();
         this.addPanel(640, 360, 1080, 620);
-        this.addScreenText(640, 150, 'In this task, 10 blocks = $50,000', 30, COLORS.ink, 860, 'center').setOrigin(0.5);
+        this.addScreenText(640, 150, 'So, 10 blocks = $50,000', 30, COLORS.ink, 860, 'center').setOrigin(0.5);
         this.drawBlockStack(640, 445, 10, 140, 12, 5);
         this.addButton(640, 635, 190, 54, 'Next', () => {
             this.showBasicNeedsThreshold();
@@ -1138,7 +1138,9 @@ showBasicNeedsComprehensionCheck ()
         '15 blocks'
     ];
 
-    choices.forEach((choice, index) => {
+    if (Phaser.Math.Between(0, 1) === 1) choices.reverse();
+
+        choices.forEach((choice, index) => {
         this.addButton(
             640,
             320 + index * 76,
@@ -1170,7 +1172,9 @@ showBasicNeedsComprehensionCheck ()
             COLORS.ink
         );
     });
-}
+
+        this.addInstructionReview('', 150, () => this.showWelcomeScreen());
+    }
 
 // Shown after selecting 10 blocks
 showCorrectBasicNeedsFeedback ()
@@ -1546,7 +1550,7 @@ showRepresentativeFamilyExplanation ()
         this.addScreenText(
             640,
             50,
-            'Here are 10 families. Each represents one-tenth of American families, ordered by income. Each one-tenth is called an income decile. In this task, the income shown is the average income of families in that decile.',
+            'Here are 10 families. Each represents one-tenth of American families, ordered by income. The income shown is the average for each income group.',
             27,
             COLORS.ink,
             1120,
@@ -1760,6 +1764,8 @@ showAvailableIncomeDistribution ()
             { code: 'not_sure', label: 'Not sure' }
         ];
 
+        if (Phaser.Math.Between(0, 1) === 1) [choices[0], choices[1]] = [choices[1], choices[0]];
+
         choices.forEach((choice, index) => {
             this.addButton(
                 640,
@@ -1777,12 +1783,14 @@ showAvailableIncomeDistribution ()
     choice.code
 );
 
-this.showFinalScreen();
+this.showTaskTransition('debrief', 'About this task', ['Please note that this task presents a simplified version of the American economy to explore how people think about it. It does not capture every aspect of the real U.S. economy.'], () => this.showFinalScreen());
                 },
                 COLORS.buttonLight,
                 COLORS.ink
             );
         });
+
+        ;
     }
 
     // Screen 9
@@ -1797,6 +1805,8 @@ this.showFinalScreen();
             this.addScreenText(640, positions[index], text, 25, COLORS.ink, 980, 'center').setOrigin(0.5);
         });
         this.addButton(640, 635, 210, 52, 'Continue', next);
+
+        if (screen !== 'income_sharing_explanation') ;
     }
 
     showIncomeSharingExplanation ()
@@ -2066,7 +2076,7 @@ this.addScreenText(
             72,
             mode === 'self_interest' &&
 this.gameData.selfInterestCondition === 'reveal'
-    ? `Your income group is Decile ${this.gameData.respondentDecile}; its box is outlined in green.`
+    ? `Your income group is Group ${this.gameData.respondentDecile}; its box is outlined in green.`
     : CLOSED_POOL_TEXT,
             14,
             COLORS.muted,
@@ -2155,7 +2165,7 @@ this.gameData.selfInterestCondition === 'reveal'
             this.addScreenText(
                 centerX,
                 cardTop + 67,
-                `Decile ${index + 1}`,
+                `Group ${index + 1}`,
                 15,
                 COLORS.ink,
                 104,
@@ -2471,6 +2481,8 @@ else if (mode === 'self_interest')
     );
 }
 
+
+        ;
     }
 
     drawDraggableStack (
@@ -2727,6 +2739,8 @@ else if (mode === 'self_interest')
             this.storeFreeAllocation(submittedAllocation);
             this.showEqualDivisionInstructions();
         });
+
+        ;
     }
 
     storeFreeAllocation (allocation)
@@ -2783,6 +2797,8 @@ else if (mode === 'self_interest')
         this.addButton(640, 635, 190, 56, 'Next', () => {
             this.startEqualDivisionTask();
         });
+
+        ;
     }
 
     startEqualDivisionTask ()
@@ -2832,6 +2848,8 @@ else if (mode === 'self_interest')
             { value: 10, label: '10 families' }
         ];
 
+        if (Phaser.Math.Between(0, 1) === 1) choices.reverse();
+
         choices.forEach((choice, index) => {
             this.addButton(
                 640,
@@ -2856,6 +2874,8 @@ else if (mode === 'self_interest')
                 COLORS.ink
             );
         });
+
+        ;
     }
 
     showPartialPolicyIntroduction ()
@@ -2876,6 +2896,8 @@ else if (mode === 'self_interest')
         this.addButton(640, 635, 190, 56, 'Next', () => {
             this.startPartialRedistributionTask();
         });
+
+        ;
     }
 
 buildAutomaticPartialAllocation ()
@@ -3151,7 +3173,9 @@ buildAutomaticPartialAllocation ()
             }
         );
     });
-}
+
+        ;
+    }
 
     showEconomicPrinciple (principleIndex)
     {
@@ -3212,6 +3236,8 @@ buildAutomaticPartialAllocation ()
                 }
             );
         });
+
+        ;
     }
 
     showSelfInterestRandomizationScreen ()
@@ -3283,7 +3309,7 @@ showNeutralSelfInterestScreen ()
     this.addScreenText(
         640,
         145,
-        'In this task, the income shown is the average for each income decile.',
+        'In this task, the income shown is the average for each income group.',
         18,
         COLORS.muted,
         1040,
@@ -3305,7 +3331,9 @@ showNeutralSelfInterestScreen ()
             this.startSelfInterestAllocation();
         }
     );
-}
+
+        ;
+    }
 
     showRespondentDecileScreen ()
     {
@@ -3317,7 +3345,7 @@ showNeutralSelfInterestScreen ()
         this.addScreenText(
             640,
             35,
-            `Your approximate income group is Decile ${this.gameData.respondentDecile} of 10`,
+            `Your approximate income group is Group ${this.gameData.respondentDecile} of 10`,
             31,
             COLORS.ink,
             1080,
@@ -3327,7 +3355,7 @@ showNeutralSelfInterestScreen ()
         this.addScreenText(
             640,
             88,
-            'This estimate is based on the household income and household size you reported earlier in the survey.',
+            'Based on your answers, this is approximately where your household falls in the income distribution.',
             22,
             COLORS.ink,
             1040,
@@ -3337,7 +3365,7 @@ showNeutralSelfInterestScreen ()
         this.addScreenText(
             640,
             145,
-            'The green outline marks your approximate income group. The income shown is the average for that decile, not your reported income.',
+            'The green outline marks your approximate income group. The income shown is the group average, not your reported income.',
             18,
             COLORS.muted,
             1040,
@@ -3360,6 +3388,8 @@ showNeutralSelfInterestScreen ()
                 this.startSelfInterestAllocation();
             }
         );
+
+        ;
     }
 
     startSelfInterestAllocation ()
@@ -3650,16 +3680,15 @@ this.recordAction({
 
         if (principleCode === 'scope')
         {
-            this.addVisualSymbol(centerX - 110, centerY, 'U.S.');
-            this.addArrowText(centerX, centerY, '→');
-
             if (optionCode === 'international')
             {
+                this.addVisualSymbol(centerX - 110, centerY, 'U.S.');
+                this.addArrowText(centerX, centerY, '→');
                 this.addVisualSymbol(centerX + 110, centerY, 'WORLD');
             }
             else
             {
-                this.drawFamilyGlyph(centerX + 110, centerY, 0.65);
+                this.addVisualSymbol(centerX, centerY, 'U.S.');
             }
 
             this.drawBlockStack(
@@ -3773,7 +3802,7 @@ this.recordAction({
             this.addScreenText(
                 centerX,
                 cardTop + 62,
-                `Decile ${index + 1}`,
+                `Group ${index + 1}`,
                 14,
                 COLORS.ink,
                 105,
@@ -4318,7 +4347,7 @@ showFinalScreen ()
     const statusText = this.addScreenText(
         640,
         340,
-        'Saving your responses…',
+        'Please wait while we save your answers.',
         25,
         COLORS.muted,
         780,
@@ -4331,7 +4360,7 @@ showFinalScreen ()
             this.gameData.saveAcknowledged = true;
 
             statusText.setText(
-                'Your responses have been saved and confirmed.'
+                'Your answers are saved. Return to the survey to finish.'
             );
 
             this.sendSurveyBackup('confirmed');
@@ -4348,8 +4377,8 @@ showFinalScreen ()
 
             statusText.setText(
                 localBackupSaved || surveyBackupSent
-                    ? 'The game could not confirm that Google stored your responses. A backup has been preserved.'
-                    : 'The game could not confirm or preserve your responses. Please notify the researcher before closing this tab.'
+                    ? 'A copy of your answers has been kept. Return to the survey to finish.'
+                    : 'We could not save your answers. Please notify the researcher before closing this tab.'
             );
 
             this.addFinalCloseControls();
@@ -4363,7 +4392,7 @@ showFinalScreen ()
             485,
             260,
             58,
-            'Close game',
+            'Return to survey',
             () => {
                 window.close();
             }
@@ -4372,7 +4401,7 @@ showFinalScreen ()
         this.addScreenText(
             640,
             555,
-            'If this tab does not close automatically, close it manually to return to the survey.',
+            'If this tab stays open, close it and return to the survey.',
             18,
             COLORS.muted,
             800,
@@ -4929,6 +4958,7 @@ addScreenObject (object)
 
 clearScreen ()
 {
+        this.clearInstructionReview();
     this.screenObjects.forEach(object => {
         if (
             object &&
@@ -4942,4 +4972,51 @@ clearScreen ()
 
     this.screenObjects = [];
 }
+
+    addInstructionReview(text, x = 150, onReview = null) {
+        this.reviewInstructionsText = text;
+        const button = this.add.rectangle(x, 675, 250, 42, 0xffffff).setStrokeStyle(2, 0x263238).setDepth(2000).setInteractive({useHandCursor: true});
+        const label = this.add.text(x, 675, 'Review instructions', {fontFamily: 'Arial', fontSize: '20px', color: '#263238'}).setOrigin(0.5).setDepth(2001);
+        this.reviewInstructionsControls = [button, label];
+        button.on('pointerdown', () => { if (onReview) onReview(); else this.openInstructionReview(); });
+    }
+    openInstructionReview() {
+        if (this.instructionReviewOverlay) return;
+        const disabled = [];
+        const visit = object => {
+            if (object.input && object.input.enabled) { disabled.push(object); object.input.enabled = false; }
+            if (object.list) object.list.forEach(visit);
+        };
+        this.children.list.forEach(visit);
+        const pausedTime = this.time.paused;
+        this.time.paused = true;
+        const tweens = this.tweens.getTweens().filter(tween => !tween.paused);
+        tweens.forEach(tween => tween.pause());
+        const objects = [];
+        const add = object => { objects.push(object); return object; };
+        const shade = add(this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setDepth(10000).setInteractive());
+        const stop = (...args) => { const event = args[args.length - 1]; if (event && event.stopPropagation) event.stopPropagation(); };
+        ['pointerdown', 'pointerup', 'pointermove'].forEach(event => shade.on(event, stop));
+        add(this.add.rectangle(640, 360, 1020, 500, 0xffffff).setStrokeStyle(3, 0x263238).setDepth(10001));
+        add(this.add.text(640, 165, 'Review instructions', {fontFamily: 'Arial', fontSize: '30px', color: '#17212b'}).setOrigin(0.5).setDepth(10002));
+        add(this.add.text(640, 340, this.reviewInstructionsText, {fontFamily: 'Arial', fontSize: '26px', color: '#17212b', align: 'center', wordWrap: {width: 890}, lineSpacing: 12}).setOrigin(0.5).setDepth(10002));
+        const close = add(this.add.rectangle(640, 550, 260, 56, 0x17212b).setDepth(10003).setInteractive({useHandCursor: true}));
+        add(this.add.text(640, 550, 'Return to task', {fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'}).setOrigin(0.5).setDepth(10004));
+        this.instructionReviewOverlay = {objects, disabled, pausedTime, tweens};
+        close.on('pointerup', (...args) => { stop(...args); this.closeInstructionReview(); });
+    }
+    closeInstructionReview() {
+        const overlay = this.instructionReviewOverlay;
+        if (!overlay) return;
+        this.instructionReviewOverlay = null;
+        overlay.objects.forEach(object => object.destroy());
+        overlay.disabled.forEach(object => { if (object.active && object.input) object.input.enabled = true; });
+        this.time.paused = overlay.pausedTime;
+        overlay.tweens.forEach(tween => { if (tween.parent) tween.resume(); });
+    }
+    clearInstructionReview() {
+        this.closeInstructionReview();
+        (this.reviewInstructionsControls || []).forEach(object => { if (object.active) object.destroy(); });
+        this.reviewInstructionsControls = [];
+    }
 }
