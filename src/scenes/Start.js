@@ -260,6 +260,22 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
         ]
     },
     {
+        code: 'empathy',
+        prompt: 'Should empathy toward people in other countries guide the U.S. decision about whether to provide foreign aid?',
+        options: [
+            { code: 'guide', title: 'Empathy should guide the decision.', detail: '' },
+            { code: 'not_guide', title: 'Empathy should not guide the decision.', detail: '' }
+        ]
+    },
+    {
+        code: 'paid_leave',
+        prompt: 'Should workers be guaranteed a minimum amount of paid time off to rest, or should paid time off be left to employers to decide?',
+        options: [
+            { code: 'guaranteed', title: 'Workers should be guaranteed a minimum amount of paid time off to rest.', detail: '' },
+            { code: 'employer_choice', title: 'Paid time off should be left to employers to decide.', detail: '' }
+        ]
+    },
+    {
         code: 'strategy',
         prompt:
             'Thinking about the American economy as shown in this task, are people more likely to cooperate with one another or compete with one another?',
@@ -2728,7 +2744,7 @@ else if (mode === 'self_interest')
 
         this.addButton(815, 540, 230, 56, 'Submit', () => {
             this.storeFreeAllocation(submittedAllocation);
-            this.showEqualDivisionInstructions();
+            this.showRedistributionBlock();
         });
 
         ;
@@ -2768,6 +2784,29 @@ else if (mode === 'self_interest')
             totalMoved,
             classification: this.gameData.freeAllocationClassification
         });
+    }
+
+    showRedistributionBlock(index = 0) {
+        if (!this.gameData.redistributionTaskOrder) {
+            this.gameData.redistributionTaskOrder = Phaser.Math.Between(0, 1) === 0
+                ? ['equal', 'partial'] : ['partial', 'equal'];
+            this.gameData.redistributionBlocksCompleted = [];
+        }
+        const block = this.gameData.redistributionTaskOrder[index];
+        if (!block) {
+            this.showRedistributionQuestion(2);
+            return;
+        }
+        if (block === 'equal') this.showEqualDivisionInstructions();
+        else this.showPartialPolicyIntroduction();
+    }
+    completeRedistributionBlock(block) {
+        const order = this.gameData.redistributionTaskOrder;
+        if (!order || !order.includes(block)) throw new Error('Redistribution block order missing');
+        if (!this.gameData.redistributionBlocksCompleted.includes(block)) {
+            this.gameData.redistributionBlocksCompleted.push(block);
+        }
+        this.showRedistributionBlock(order.indexOf(block) + 1);
     }
 
     showEqualDivisionInstructions ()
@@ -2876,7 +2915,7 @@ else if (mode === 'self_interest')
         this.addPanel(640, 360, 1080, 600);
         this.addScreenText(
             640, 250,
-            "Another option governments have is to redistribute some income from families above the basic-needs line to families below it.",
+            "One option governments have is to redistribute some income from families above the basic-needs line to families below it.",
             27, COLORS.ink, 900, 'center'
         ).setOrigin(0.5);
         this.addScreenText(
@@ -3233,9 +3272,9 @@ buildAutomaticPartialAllocation ()
                     option.code
                 );
 
-                if (question.code === 'equal_redistribution')
+                if (question.code === 'equal_redistribution' || question.code === 'partial_redistribution')
                 {
-                    this.showPartialPolicyIntroduction();
+                    this.completeRedistributionBlock(question.code === 'equal_redistribution' ? 'equal' : 'partial');
                 }
                 else
                 {
@@ -3551,9 +3590,17 @@ this.recordAction({
         box.setInteractive({ useHandCursor: true });
         this.addScreenObject(box);
 
+        if (option.textOnly)
+        {
+            this.addScreenText(centerX, 345, option.title, 27, COLORS.ink, 490, 'center').setOrigin(0.5);
+            this.addScreenText(centerX, 610, 'Select this option', 17, COLORS.muted, 300, 'center').setOrigin(0.5);
+            box.on('pointerdown', callback);
+            return box;
+        }
+
         this.addScreenText(
             centerX,
-            175,
+            (principleCode === 'empathy' || principleCode === 'paid_leave') ? 210 : 175,
             option.title,
             27,
             COLORS.ink,
@@ -3749,6 +3796,65 @@ this.recordAction({
                 ).setOrigin(0.5);
             }
 
+            return;
+        }
+
+        if (principleCode === 'paid_leave')
+        {
+            const picture = this.add.graphics({ x: centerX, y: centerY + 20 });
+            this.addScreenObject(picture);
+            const ink = 0x000000;
+            const line = (x1, y1, x2, y2, width = 10) => {
+                picture.lineStyle(width, ink, 1);
+                picture.lineBetween(x1, y1, x2, y2);
+            };
+            const polygon = (points) => {
+                picture.fillStyle(ink, 1);
+                picture.fillPoints(points.map(([x, y]) => ({ x, y })), true);
+            };
+            picture.fillStyle(ink, 1);
+            if (optionCode === 'guaranteed')
+            {
+                // Original silhouette: reading in an outdoor reclining chair.
+                polygon([[-108, 30], [14, 30], [65, -67], [83, -62], [34, 51], [-108, 45]]);
+                polygon([[-88, 43], [-76, 43], [-93, 93], [-104, 93]]);
+                polygon([[14, 46], [27, 46], [65, 93], [51, 93]]);
+                picture.fillCircle(43, -76, 16);
+                polygon([[33, -61], [56, -55], [40, -20], [24, 22], [-5, 24], [11, -18]]);
+                line(17, 22, -42, 22, 19);
+                line(-42, 22, -88, 21, 17);
+                line(-87, 21, -96, 3, 12);
+                line(32, -40, 7, -15, 11);
+                line(7, -15, -16, -34, 10);
+                polygon([[-40, -60], [-18, -57], [-2, -36], [-20, -39]]);
+                polygon([[-18, -57], [0, -69], [16, -47], [-2, -36]]);
+            }
+            else
+            {
+                // Original silhouette: manual labor with a shovel and soil.
+                picture.fillCircle(0, -82, 17);
+                polygon([[-21, -65], [0, -55], [-7, -10], [-32, -16], [-34, -31], [-42, -47]]);
+                line(-27, -58, -63, -64, 12);
+                line(-63, -64, -62, -30, 12);
+                line(-8, -49, -7, 6, 13);
+                line(-27, -22, -47, 25, 17);
+                line(-47, 25, -65, 74, 17);
+                picture.fillCircle(-65, 74, 8);
+                line(-25, -20, -18, 23, 17);
+                line(-18, 23, -17, 76, 17);
+                picture.fillCircle(-17, 76, 8);
+                line(-64, -31, 47, 44, 5);
+                polygon([[39, 29], [62, 42], [70, 59], [56, 64], [39, 56], [31, 48]]);
+                picture.fillEllipse(83, 85, 63, 36);
+                polygon([[14, 99], [36, 88], [69, 81], [106, 86], [123, 99]]);
+            }
+            return;
+        }
+
+        if (principleCode === 'empathy')
+        {
+            // Match the preceding foreign-aid visuals for the two empathy options.
+            this.drawPrincipleVisualization('scope', optionCode === 'guide' ? 'international' : 'domestic', centerX, centerY);
             return;
         }
 
@@ -4689,6 +4795,8 @@ buildAllocationInteractionSummary ()
 buildSurveyBackupSummary ()
 {
     return {
+        redistributionTaskOrder: this.gameData.redistributionTaskOrder,
+        redistributionBlocksCompleted: this.gameData.redistributionBlocksCompleted,
         gameId:
             this.gameData.gameId,
 
