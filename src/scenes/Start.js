@@ -222,6 +222,14 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
         ]
     },
     {
+        code: 'income_priority',
+        prompt: 'Whose economic needs should receive greater priority?',
+        options: [
+            { code: 'lowest', title: 'The lower class', detail: 'Because they need the most help and investing in them can increase their productivity.' },
+            { code: 'highest', title: 'The upper class', detail: 'Because they earned their wealth and are best positioned to help others.' }
+        ]
+    },
+    {
         code: 'time',
         prompt:
             'Thinking about the American economy as shown in this task, which should receive greater priority: improving economic well-being and production today, or investing to improve economic well-being and production in the future?',
@@ -3297,7 +3305,14 @@ buildAutomaticPartialAllocation ()
     return;
 }
 
-        const principle = ECONOMIC_PRINCIPLES[principleIndex];
+        if (!this.gameData.economicPrincipleOrder) {
+            this.gameData.economicPrincipleOrder = Phaser.Utils.Array.Shuffle(
+                ECONOMIC_PRINCIPLES.map(item => item.code)
+            );
+        }
+        const principle = ECONOMIC_PRINCIPLES.find(
+            item => item.code === this.gameData.economicPrincipleOrder[principleIndex]
+        );
 
         this.enterScreen(`economic_principle_${principle.code}`);
         this.clearScreen();
@@ -3796,6 +3811,15 @@ this.recordAction({
                 ).setOrigin(0.5);
             }
 
+            return;
+        }
+
+        if (principleCode === 'income_priority')
+        {
+            // Identical family silhouettes; only the depicted income differs.
+            this.drawFamilyGlyph(centerX - 80, centerY, 0.85);
+            this.drawBlockStack(centerX + 95, centerY + 55,
+                optionCode === 'lowest' ? 3 : 12, 80, 8, 3);
             return;
         }
 
@@ -4795,7 +4819,8 @@ buildAllocationInteractionSummary ()
 buildSurveyBackupSummary ()
 {
     return {
-        redistributionTaskOrder: this.gameData.redistributionTaskOrder,
+        economicPrincipleOrder: this.gameData.economicPrincipleOrder,
+                redistributionTaskOrder: this.gameData.redistributionTaskOrder,
         redistributionBlocksCompleted: this.gameData.redistributionBlocksCompleted,
         gameId:
             this.gameData.gameId,
