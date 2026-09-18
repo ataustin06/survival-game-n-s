@@ -155,21 +155,10 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     },
     {
         code: 'government_feasibility',
-        prompt:
-            'Thinking about the American economy as shown in this task, would it be POSSIBLE for government policy to ensure that every family has enough income to meet its basic needs?',
+        prompt: 'Could the available income be distributed so that all 10 families have at least $50,000 each?',
         options: [
-            {
-                code: 'possible',
-                title: 'It would be possible',
-                detail:
-                    'Government policy could ensure that every family has enough income to meet its basic needs.'
-            },
-            {
-                code: 'not_possible',
-                title: 'It would not be possible',
-                detail:
-                    'Government policy could not ensure that every family has enough income to meet its basic needs.'
-            }
+            { code: 'possible', title: 'Yes', detail: '' },
+            { code: 'not_possible', title: 'No', detail: '' }
         ]
     },
     {
@@ -528,6 +517,8 @@ export default class Start extends Phaser.Scene
             selfInterestEqualButtonUsed: false,
             selfInterestPartialButtonUsed: false,
 
+            redistributionChecklistChoices: {},
+            redistributionChecklistOrders: {},
             redistributionChoices: {},
             redistributionOptionOrders: {},
             economicPrinciples: {},
@@ -1141,7 +1132,7 @@ showBasicNeedsComprehensionCheck ()
     if (Phaser.Math.Between(0, 1) === 1) choices.reverse();
 
         choices.forEach((choice, index) => {
-        this.addButton(
+        this.addConfirmedButton(
             640,
             320 + index * 76,
             360,
@@ -1767,7 +1758,7 @@ showAvailableIncomeDistribution ()
         if (Phaser.Math.Between(0, 1) === 1) [choices[0], choices[1]] = [choices[1], choices[0]];
 
         choices.forEach((choice, index) => {
-            this.addButton(
+            this.addConfirmedButton(
                 640,
                 370 + index * 76,
                 360,
@@ -2851,7 +2842,7 @@ else if (mode === 'self_interest')
         if (Phaser.Math.Between(0, 1) === 1) choices.reverse();
 
         choices.forEach((choice, index) => {
-            this.addButton(
+            this.addConfirmedButton(
                 640,
                 315 + index * 76,
                 360,
@@ -3102,11 +3093,78 @@ buildAutomaticPartialAllocation ()
         });
     }
 
+    selectAnswerForConfirmation(box, callback) {
+        (this.confirmedChoiceBoxes || []).forEach(choice => choice.setStrokeStyle(2, COLORS.border));
+        box.setStrokeStyle(5, COLORS.border);
+        this.pendingAnswerCallback = callback;
+        if (!this.answerNextButton) {
+            this.answerNextButton = this.addButton(640, 680, 180, 48, 'Next', () => {
+                const answer = this.pendingAnswerCallback;
+                this.pendingAnswerCallback = null;
+                if (answer) answer();
+            });
+        }
+    }
+    addConfirmedButton(x, y, width, height, label, callback, fill, color) {
+        const box = this.addButton(x, y, width, height, label, () => this.selectAnswerForConfirmation(box, callback), fill, color);
+        (this.confirmedChoiceBoxes ||= []).push(box);
+        return box;
+    }
+    addConfirmedLargeChoice(y, title, detail, callback) {
+        const box = this.addLargeChoice(y, title, detail, () => this.selectAnswerForConfirmation(box, callback));
+        (this.confirmedChoiceBoxes ||= []).push(box);
+        return box;
+    }
+    drawConfirmedPrincipleChoice(x, principle, option, callback) {
+        const box = this.drawPrincipleChoice(x, principle, option, () => this.selectAnswerForConfirmation(box, callback));
+        (this.confirmedChoiceBoxes ||= []).push(box);
+        return box;
+    }
+    showRedistributionChecklist(index) {
+        const codes = ['basic_needs', 'support'];
+        const code = codes[index];
+        this.enterScreen('redistribution_checklist_' + code);
+        this.clearScreen();
+        this.addPanel(640, 360, 1120, 610);
+        this.addScreenText(640, 135, index === 0
+            ? 'Which approaches would allow the most families to meet their basic needs? Select all that apply.'
+            : 'Which approaches do you most support? Select all that apply.',
+            27, COLORS.ink, 1000, 'center').setOrigin(0.5);
+        const options = [
+            {code: 'noRedistribution', label: 'Each family should keep its starting income.'},
+            {code: 'equalRedistribution', label: 'Income should be divided equally among all families.'},
+            {code: 'partialRedistribution', label: 'Income above the basic-needs line should be redistributed so that the greatest possible number of families have at least $50,000.'}
+        ];
+        const selected = {noRedistribution: false, equalRedistribution: false, partialRedistribution: false};
+        const next = this.addButton(640, 680, 180, 48, 'Next', () => {
+            if (!Object.values(selected).some(Boolean)) return;
+            this.gameData.redistributionChecklistChoices[code] = {...selected};
+            this.recordAnswer('redistribution_checklist_' + code, {...selected});
+            if (index === 0) this.showRedistributionChecklist(1);
+            else this.showEconomicPrinciple(0);
+        });
+        next.disableInteractive().setAlpha(0.4);
+        this.getOrderedOptions(code, options, this.gameData.redistributionChecklistOrders).forEach((option, i) => {
+            const y = 290 + i * 115;
+            const box = this.add.rectangle(640, y, 1000, 95, COLORS.card).setStrokeStyle(2, COLORS.border).setInteractive({useHandCursor: true});
+            this.addScreenObject(box);
+            this.addScreenObject(this.add.rectangle(190, y, 32, 32, COLORS.panel).setStrokeStyle(2, COLORS.border));
+            const mark = this.addScreenText(190, y, '✓', 30, COLORS.ink, 50, 'center').setOrigin(0.5).setVisible(false);
+            this.addScreenText(235, y, option.label, 23, COLORS.ink, 865, 'left').setOrigin(0, 0.5);
+            box.on('pointerdown', () => {
+                selected[option.code] = !selected[option.code];
+                mark.setVisible(selected[option.code]);
+                box.setStrokeStyle(selected[option.code] ? 4 : 2, COLORS.border);
+                if (Object.values(selected).some(Boolean)) next.setInteractive({useHandCursor: true}).setAlpha(1);
+                else next.disableInteractive().setAlpha(0.4);
+            });
+        });
+    }
     showRedistributionQuestion (questionIndex)
 {
     if (questionIndex >= REDISTRIBUTION_QUESTIONS.length)
     {
-        this.showEconomicPrinciple(0);
+        this.showRedistributionChecklist(0);
         return;
     }
 
@@ -3138,6 +3196,21 @@ buildAutomaticPartialAllocation ()
         'center'
     ).setOrigin(0.5);
 
+    if (question.code === 'government_feasibility')
+    {
+        const choices = this.getOrderedOptions(question.code, question.options, this.gameData.redistributionOptionOrders);
+        this.gameData.redistributionOptionOrders[question.code] = choices.map(option => option.code);
+        choices.forEach((option, index) => this.addConfirmedButton(
+            640, 350 + index * 85, 360, 60, option.title,
+            () => {
+                this.gameData.redistributionChoices[question.code] = option.code;
+                this.recordAnswer(question.code, option.code);
+                this.showRedistributionQuestion(questionIndex + 1);
+            }, COLORS.buttonLight, COLORS.ink
+        ));
+        return;
+    }
+
     const orderedOptions = this.getOrderedOptions(
         question.code,
         question.options,
@@ -3147,7 +3220,7 @@ buildAutomaticPartialAllocation ()
     orderedOptions.forEach((option, index) => {
         const centerY = 365 + index * 175;
 
-        this.addLargeChoice(
+        this.addConfirmedLargeChoice(
             centerY,
             option.title,
             option.detail,
@@ -3219,7 +3292,7 @@ buildAutomaticPartialAllocation ()
         orderedOptions.forEach((option, index) => {
             const centerX = index === 0 ? 330 : 950;
 
-            this.drawPrincipleChoice(
+            this.drawConfirmedPrincipleChoice(
                 centerX,
                 principle.code,
                 option,
@@ -3516,6 +3589,7 @@ this.recordAction({
         ).setOrigin(0.5);
 
         box.on('pointerdown', callback);
+        return box;
     }
 
     drawPrincipleVisualization (principleCode, optionCode, centerX, centerY)
@@ -4217,6 +4291,7 @@ this.recordAction({
         ).setOrigin(0, 0);
 
         box.on('pointerdown', callback);
+        return box;
     }
 
     getOrderedOptions (questionCode, options, orderStore)
@@ -4664,6 +4739,8 @@ buildSurveyBackupSummary ()
             this.gameData
                 .partialRedistributionFinal,
 
+        redistributionChecklistChoices: this.gameData.redistributionChecklistChoices,
+        redistributionChecklistOrders: this.gameData.redistributionChecklistOrders,
         redistributionChoices:
             this.gameData
                 .redistributionChoices,
@@ -4959,6 +5036,9 @@ addScreenObject (object)
 clearScreen ()
 {
         this.clearInstructionReview();
+    this.confirmedChoiceBoxes = [];
+    this.pendingAnswerCallback = null;
+    this.answerNextButton = null;
     this.screenObjects.forEach(object => {
         if (
             object &&
