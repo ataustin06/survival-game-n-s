@@ -563,7 +563,7 @@ export default class Start extends Phaser.Scene
         if (!this.isValidExternalId(gameId))
         {
             launchErrors.push(
-                'a valid game ID'
+                'a valid task ID'
             );
         }
 
@@ -869,7 +869,7 @@ export default class Start extends Phaser.Scene
         this.addScreenText(
             640,
             330,
-            `The game link is missing ${launchErrors.join(', ')}. ` +
+            `The task link is missing ${launchErrors.join(', ')}. ` +
                 'Please close this tab, return to the survey, and open the task again.',
             25,
             COLORS.ink,
@@ -1140,7 +1140,7 @@ showBasicNeedsComprehensionCheck ()
     this.addScreenText(
         640,
         175,
-        'According to the game, how many blocks represent $50,000?',
+        'How many blocks represent $50,000?',
         29,
         COLORS.ink,
         880,
@@ -1211,7 +1211,7 @@ showCorrectBasicNeedsFeedback ()
     this.addScreenText(
         640,
         220,
-        'In this game, 10 blocks represent $50,000.',
+        '10 blocks represent $50,000.',
         27,
         COLORS.ink,
         760,
@@ -1389,7 +1389,7 @@ showRepresentativeFamilyExplanation ()
     this.addScreenText(
         640,
         150,
-        'Each family shown in this game represents a group of American families with similar incomes.',
+        'Each family shown represents a group of American families with similar incomes.',
         27,
         COLORS.ink,
         900,
@@ -2040,7 +2040,7 @@ this.showTaskTransition('debrief', 'About this task', ['Please note that this ta
         const boardTitles = {
             free: 'Arrange the blocks in the way you think is best for America',
             equal: 'Divide the income equally among all 10 families',
-            partial: 'Allow the greatest possible number of families to reach $50,000',
+            partial: 'Use income above $50,000 to help as many families as possible reach $50,000.',
             self_interest:
                 'Now arrange the blocks in the way you think is best for America'
         };
@@ -4631,7 +4631,7 @@ showFinalScreen ()
     )
     {
         throw new Error(
-            'The game ID or Qualtrics response ID is invalid.'
+            'The task ID or Qualtrics response ID is invalid.'
         );
     }
 
