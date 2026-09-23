@@ -164,7 +164,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'redistributive_guarantee',
         prompt:
-            'Thinking about the American economy as shown in this task, SHOULD the government create a policy that guarantees that each family will have enough income to meet its basic needs?',
+            'Thinking about the American economy as shown in this task, SHOULD the government create a policy that guarantees each family enough income to meet its basic needs, or not?',
         options: [
             {
                 code: 'support_guarantee',
@@ -223,10 +223,10 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     },
     {
         code: 'income_priority',
-        prompt: 'Whose economic needs should receive greater priority?',
+        prompt: 'Some argue that government should prioritize lower-income families because they need help and investment may increase their productivity. Others argue it should prioritize higher-income families because they earned their resources and may use them to help others. Whose interests should receive greater priority in government economic policy?',
         options: [
-            { code: 'lowest', title: 'The lower class', detail: 'Because they need the most help and investing in them can increase their productivity.' },
-            { code: 'highest', title: 'The upper class', detail: 'Because they earned their wealth and are best positioned to help others.' }
+            { code: 'lowest', title: 'Lower-income families', detail: '' },
+            { code: 'highest', title: 'Higher-income families', detail: '' }
         ]
     },
     {
@@ -269,10 +269,10 @@ const ECONOMIC_PRINCIPLES = Object.freeze([
     },
     {
         code: 'empathy',
-        prompt: 'Should empathy toward people in other countries guide the U.S. decision about whether to provide foreign aid?',
+        prompt: 'When deciding whether to provide foreign aid, which should weigh more heavily?',
         options: [
-            { code: 'guide', title: 'Empathy should guide the decision.', detail: '' },
-            { code: 'not_guide', title: 'Empathy should not guide the decision.', detail: '' }
+            { code: 'guide', title: 'Concern for people in other countries.', detail: '' },
+            { code: 'not_guide', title: 'The resources people in the United States would have to give up.', detail: '' }
         ]
     },
     {
@@ -906,7 +906,7 @@ export default class Start extends Phaser.Scene
         this.addScreenText(
             640,
             390,
-            'This activity uses a large drag-and-drop board and cannot be completed on a phone or tablet. Please reopen the study on a laptop or desktop computer.',
+            'This activity cannot be completed on a phone or tablet. Please restart the survey from the study invitation on a laptop or desktop computer. Do not move the game link between devices.',
             26,
             COLORS.ink,
             820,
@@ -3319,11 +3319,11 @@ buildAutomaticPartialAllocation ()
 
         this.addScreenText(
             640,
-            35,
+            45,
             principle.prompt,
-            27,
+            principle.code === 'income_priority' ? 24 : 27,
             COLORS.ink,
-            1130,
+            principle.code === 'income_priority' ? 1190 : 1130,
             'center'
         ).setOrigin(0.5, 0);
 
@@ -3595,9 +3595,9 @@ this.recordAction({
     {
         const box = this.add.rectangle(
             centerX,
-            395,
+            415,
             560,
-            500,
+            460,
             COLORS.panel
         );
 
@@ -3605,9 +3605,9 @@ this.recordAction({
         box.setInteractive({ useHandCursor: true });
         this.addScreenObject(box);
 
-        if (option.textOnly)
+        if (option.textOnly || principleCode === 'paid_leave' || principleCode === 'empathy')
         {
-            this.addScreenText(centerX, 345, option.title, 27, COLORS.ink, 490, 'center').setOrigin(0.5);
+            this.addScreenText(centerX, 370, option.title, 27, COLORS.ink, 490, 'center').setOrigin(0.5);
             this.addScreenText(centerX, 610, 'Select this option', 17, COLORS.muted, 300, 'center').setOrigin(0.5);
             box.on('pointerdown', callback);
             return box;
@@ -3615,7 +3615,7 @@ this.recordAction({
 
         this.addScreenText(
             centerX,
-            (principleCode === 'empathy' || principleCode === 'paid_leave') ? 210 : 175,
+            225,
             option.title,
             27,
             COLORS.ink,
