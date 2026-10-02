@@ -164,7 +164,7 @@ const REDISTRIBUTION_QUESTIONS = Object.freeze([
     {
         code: 'redistributive_guarantee',
         prompt:
-            'Thinking about the American economy as shown in this task, SHOULD the government create a policy that guarantees each family enough income to meet its basic needs, or not?',
+            'Thinking about the American economy as shown in this task, should the government create a policy that guarantees each family enough income to meet its basic needs, or not?',
         options: [
             {
                 code: 'support_guarantee',
