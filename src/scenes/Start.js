@@ -3235,7 +3235,7 @@ buildAutomaticPartialAllocation ()
         640,
         245,
         ['equal_redistribution', 'partial_redistribution'].includes(question.code)
-            ? 'For this question, choose only between the two options below. The arrangement you created earlier is not an option.'
+            ? 'For this question, choose one of the two options below.'
             : CLOSED_POOL_TEXT,
         18,
         COLORS.muted,
