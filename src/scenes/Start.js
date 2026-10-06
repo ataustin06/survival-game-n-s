@@ -3174,8 +3174,8 @@ buildAutomaticPartialAllocation ()
         this.clearScreen();
         this.addPanel(640, 360, 1120, 610);
         this.addScreenText(640, 135, index === 0
-            ? 'Which approaches would allow the most families to meet their basic needs? Select all that apply.'
-            : 'Which approaches do you most support? Select all that apply.',
+            ? 'Which approaches do you think would help families meet their basic needs? Select all that apply.'
+            : 'Which approaches would you support? Select all that apply.',
             27, COLORS.ink, 1000, 'center').setOrigin(0.5);
         const options = [
             {code: 'noRedistribution', label: 'Each family should keep its starting income.'},
